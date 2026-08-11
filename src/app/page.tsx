@@ -581,12 +581,12 @@ export default function ConformityPage() {
         <Logo subtitle="CONFORMITY" />
         <div className="flex-1" />
         <div className="flex flex-wrap items-center gap-2">
+          <ComicButton onClick={handleReset}>Nouveau</ComicButton>
           <ComicButton onClick={handleExportPng}>Export PNG</ComicButton>
           <ComicButton onClick={handleExportPdf} variant="solid">
             Export PDF
           </ComicButton>
           <ComicButton onClick={handlePrint}>Imprimer</ComicButton>
-          <ComicButton onClick={handleReset}>Nouveau</ComicButton>
         </div>
       </header>
 
