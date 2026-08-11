@@ -6,8 +6,8 @@ export function Logo({ subtitle }: { subtitle?: string }) {
       <Image
         src="/aynil-logo.png"
         alt="AYNIL"
-        width={512}
-        height={512}
+        width={256}
+        height={256}
         priority
         className="h-9 w-9 shrink-0 rounded-md"
       />
