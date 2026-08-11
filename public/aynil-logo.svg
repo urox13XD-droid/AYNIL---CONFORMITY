@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1000">
+  <rect x="0" y="0" width="1000" height="1000" rx="120" ry="120" fill="#000000"/>
+  <!-- A: solid triangle with a triangular counter cut via evenodd -->
+  <path fill="#ffffff" fill-rule="evenodd" d="
+    M 300 100
+    L 15 930
+    L 705 930
+    Z
+    M 300 470
+    L 435 800
+    L 165 800
+    Z
+  "/>
+  <!-- Y: funnel/checkmark outline -->
+  <path fill="#ffffff" d="
+    M 450 100
+    L 615 545
+    L 615 930
+    L 765 930
+    L 765 545
+    L 935 100
+    L 840 100
+    L 710 440
+    L 540 100
+    Z
+  "/>
+</svg>
