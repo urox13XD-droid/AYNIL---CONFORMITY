@@ -10,6 +10,7 @@ import {
   ImageLayout,
   RATIO_PRESETS,
   TextStyle,
+  clearDraft,
   loadDraft,
   ratioLabel,
   saveDraft,
@@ -532,6 +533,16 @@ export default function ConformityPage() {
     window.print();
   }, [clearSelectionAndWait]);
 
+  const handleReset = useCallback(() => {
+    if (!window.confirm("Réinitialiser la page ? Toutes les données saisies seront perdues.")) return;
+    clearDraft();
+    setSheet({ ...EMPTY_SHEET, date: todayIso() });
+    setImages([]);
+    setSelected(null);
+    setSelectedImageId(null);
+    setToast("Page réinitialisée");
+  }, []);
+
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
       e.preventDefault();
@@ -575,6 +586,7 @@ export default function ConformityPage() {
             Export PDF
           </ComicButton>
           <ComicButton onClick={handlePrint}>Imprimer</ComicButton>
+          <ComicButton onClick={handleReset}>Nouveau</ComicButton>
         </div>
       </header>
 

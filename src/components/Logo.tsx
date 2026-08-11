@@ -1,11 +1,14 @@
+import Image from "next/image";
+
 export function Logo({ subtitle }: { subtitle?: string }) {
   return (
     <div className="inline-flex shrink-0 flex-col select-none">
-      <img
-        src="/aynil-logo.svg"
+      <Image
+        src="/aynil-logo.png"
         alt="AYNIL"
-        width={1000}
-        height={1000}
+        width={512}
+        height={512}
+        priority
         className="h-9 w-9 shrink-0 rounded-md"
       />
       {subtitle && (

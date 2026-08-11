@@ -164,3 +164,8 @@ export function saveDraft(sheet: ConformitySheetData) {
   if (typeof window === "undefined") return;
   window.localStorage.setItem(DRAFT_KEY, JSON.stringify(sheet));
 }
+
+export function clearDraft() {
+  if (typeof window === "undefined") return;
+  window.localStorage.removeItem(DRAFT_KEY);
+}
