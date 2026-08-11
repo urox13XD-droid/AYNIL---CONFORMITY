@@ -2,23 +2,20 @@ import Image from "next/image";
 
 export function Logo({ subtitle }: { subtitle?: string }) {
   return (
-    <div className="inline-flex shrink-0 items-center gap-2 select-none">
+    <div className="inline-flex shrink-0 flex-col items-center select-none">
       <Image
-        src="/aynil-logo.png"
+        src="/aynil-logo.jpg"
         alt="AYNIL"
-        width={256}
-        height={256}
+        width={960}
+        height={169}
         priority
-        className="h-9 w-9 shrink-0 rounded-md"
+        className="h-9 w-auto shrink-0 rounded-md border-[3px] border-black"
       />
-      <div className="flex flex-col items-center">
-        <span className="font-display text-2xl leading-none">AYNIL</span>
-        {subtitle && (
-          <div className="mt-1 rounded-sm bg-black px-1.5 py-0.5 text-center text-[9px] font-bold tracking-[0.25em] text-white">
-            {subtitle}
-          </div>
-        )}
-      </div>
+      {subtitle && (
+        <div className="mt-1 rounded-sm bg-black px-1.5 py-0.5 text-center text-[9px] font-bold tracking-[0.25em] text-white">
+          {subtitle}
+        </div>
+      )}
     </div>
   );
 }
