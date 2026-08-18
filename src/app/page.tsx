@@ -10,10 +10,7 @@ import {
   ImageLayout,
   RATIO_PRESETS,
   TextStyle,
-  clearDraft,
-  loadDraft,
   ratioLabel,
-  saveDraft,
 } from "@/lib/conformity";
 
 function ComicButton({
@@ -144,24 +141,15 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
 }
 
-function readAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(String(reader.result));
-    reader.onerror = () => reject(reader.error);
-    reader.readAsDataURL(file);
-  });
-}
-
-// true only if the browser's own <img> can actually decode this data URL —
+// true only if the browser's own <img> can actually decode this source —
 // some formats (notably HEIC straight from an iPhone's photo library)
-// produce a valid-looking data URL that <img> silently refuses to render
-function dataUrlRendersAsImage(dataUrl: string): Promise<boolean> {
+// produce a src that <img> silently refuses to render
+function imageSrcRenders(src: string): Promise<boolean> {
   return new Promise((resolve) => {
     const img = new Image();
     img.onload = () => resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
     img.onerror = () => resolve(false);
-    img.src = dataUrl;
+    img.src = src;
   });
 }
 
@@ -191,15 +179,18 @@ async function normalizeViaCanvas(file: File): Promise<string | null> {
   }
 }
 
-// normalizes any picked file to a data URL the browser can actually render.
-// most photos (JPEG/PNG/WebP) work as-is — that fast path is tried first and
-// verified — and only a format <img> can't handle falls through to the
-// heavier canvas-based recovery
-async function fileToDataUrl(file: File): Promise<string> {
-  const raw = await readAsDataUrl(file);
-  if (await dataUrlRendersAsImage(raw)) return raw;
+// resolves to a URL the browser can actually render as an <img>. Uses a
+// blob: URL (not a base64 data: URL) as the fast path: Mobile Safari has a
+// known limitation where large data: URIs — exactly what a full-resolution
+// phone photo produces — can silently fail to render, while blob: URLs
+// (backed by the File directly, no base64 re-encoding) don't have that
+// ceiling. If the format itself still can't be decoded (rare), falls back to
+// decoding via createImageBitmap and re-encoding as JPEG.
+async function fileToImageSrc(file: File): Promise<string> {
+  const blobUrl = URL.createObjectURL(file);
+  if (await imageSrcRenders(blobUrl)) return blobUrl;
   const normalized = await normalizeViaCanvas(file);
-  return normalized ?? raw;
+  return normalized ?? blobUrl;
 }
 
 const SHEET_RATIO_PCT = (210 / 297) * 100; // A4 landscape height-as-%-of-width, locked via a padding-bottom spacer
@@ -620,7 +611,6 @@ export default function ConformityPage() {
   const [future, setFuture] = useState<Doc[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
-  const [loaded, setLoaded] = useState(false);
   const [selected, setSelected] = useState<ConformityElementKey | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const previewRef = useRef<HTMLDivElement>(null);
@@ -636,16 +626,12 @@ export default function ConformityPage() {
   const editSnapshotRef = useRef<Doc | null>(null);
 
   useEffect(() => {
-    const draft = loadDraft();
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external store (localStorage) on mount
-    setSheetRaw(draft ?? { ...EMPTY_SHEET, date: todayIso() });
-    setLoaded(true);
+    // the page is statically prerendered, so today's date can't be baked
+    // into the initial state — set it client-side once mounted. The sheet
+    // always starts blank; nothing is persisted across page loads.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- reads the client's current date, not derivable at prerender time
+    setSheetRaw((s) => ({ ...s, date: todayIso() }));
   }, []);
-
-  useEffect(() => {
-    if (!loaded) return;
-    saveDraft(sheet);
-  }, [sheet, loaded]);
 
   useEffect(() => {
     if (!toast) return;
@@ -834,10 +820,10 @@ export default function ConformityPage() {
       commitSnapshot();
       files.slice(0, room).forEach((file) => {
         const id = `img_${Math.random().toString(36).slice(2, 10)}`;
-        fileToDataUrl(file)
-          .then((dataUrl) => {
+        fileToImageSrc(file)
+          .then((src) => {
             setImagesRaw((cur) =>
-              cur.length >= MAX_IMAGES ? cur : [...cur, { id, src: dataUrl, layout: defaultImageLayout(cur.length) }]
+              cur.length >= MAX_IMAGES ? cur : [...cur, { id, src, layout: defaultImageLayout(cur.length) }]
             );
           })
           .catch(() => setToast("Impossible de charger cette image"));
@@ -900,7 +886,6 @@ export default function ConformityPage() {
   const handleReset = useCallback(() => {
     if (!window.confirm("Réinitialiser la page ? Toutes les données saisies seront perdues.")) return;
     commitSnapshot();
-    clearDraft();
     setSheetRaw({ ...EMPTY_SHEET, date: todayIso() });
     setImagesRaw([]);
     setSelected(null);
