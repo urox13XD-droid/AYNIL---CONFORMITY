@@ -305,7 +305,7 @@ function StylePanel({
   return (
     <div
       data-style-panel
-      className="fixed bottom-4 right-4 z-30 w-60 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg"
+      className="fixed inset-x-4 top-4 z-30 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg lg:inset-x-auto lg:top-auto lg:bottom-4 lg:right-4 lg:w-60"
     >
       <div className="mb-2 flex items-center justify-between">
         <span className="font-display text-xs font-bold uppercase tracking-wide">Style du texte</span>
@@ -559,7 +559,7 @@ export default function ConformityPage() {
     { key: "subtitle", value: sheet.subtitle, align: "right", uppercase: true },
     {
       key: "title",
-      value: `Conformité de cadre${sheet.cameraLetter ? ` — Caméra ${sheet.cameraLetter}` : ""}`,
+      value: `Conformité Cadre${sheet.cameraLetter ? ` — Caméra ${sheet.cameraLetter}` : ""}`,
       align: "center",
       uppercase: true,
     },
