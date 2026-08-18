@@ -43,6 +43,74 @@ function ComicButton({
   );
 }
 
+function RoundIconButton({
+  children,
+  onClick,
+  disabled,
+  title,
+  variant = "outline",
+}: {
+  children: React.ReactNode;
+  onClick?: () => void;
+  disabled?: boolean;
+  title?: string;
+  variant?: "outline" | "solid";
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      title={title}
+      aria-label={title}
+      className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full border-[2.5px] border-black shadow-comic-sm transition active:translate-x-[1px] active:translate-y-[1px] active:shadow-none disabled:cursor-not-allowed disabled:opacity-30 disabled:hover:bg-white disabled:hover:text-black ${
+        variant === "solid"
+          ? "bg-black text-white hover:bg-white hover:text-black"
+          : "bg-white text-black hover:bg-black hover:text-white"
+      }`}
+    >
+      {children}
+    </button>
+  );
+}
+
+function UndoIcon({ flipped }: { flipped?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.4}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+      style={flipped ? { transform: "scaleX(-1)" } : undefined}
+    >
+      <path d="M9 14 4 9l5-5" />
+      <path d="M4 9h10a6 6 0 0 1 0 12h-2" />
+    </svg>
+  );
+}
+
+function TrashIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      <path d="M4 7h16" />
+      <path d="M9 7V4h6v3" />
+      <path d="M6 7l1 13h10l1-13" />
+      <path d="M10 11v6M14 11v6" />
+    </svg>
+  );
+}
+
 function Field({
   label,
   children,
@@ -76,6 +144,30 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
 }
 
+// normalizes any picked file (including formats an <img> tag can't reliably
+// decode from a data URL across browsers, e.g. HEIC straight from an iPhone's
+// photo library) to a plain PNG data URL by round-tripping through a canvas
+async function fileToDataUrl(file: File): Promise<string> {
+  try {
+    const bitmap = await createImageBitmap(file);
+    const canvas = document.createElement("canvas");
+    canvas.width = bitmap.width;
+    canvas.height = bitmap.height;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("no 2d context");
+    ctx.drawImage(bitmap, 0, 0);
+    bitmap.close?.();
+    return canvas.toDataURL("image/png");
+  } catch {
+    return await new Promise<string>((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => resolve(String(reader.result));
+      reader.onerror = () => reject(reader.error);
+      reader.readAsDataURL(file);
+    });
+  }
+}
+
 const SHEET_RATIO_PCT = (210 / 297) * 100; // A4 landscape height-as-%-of-width, locked via a padding-bottom spacer
 
 interface SheetElement {
@@ -93,6 +185,29 @@ interface SheetImage {
   layout: ImageLayout;
 }
 
+interface Doc {
+  sheet: ConformitySheetData;
+  images: SheetImage[];
+}
+
+type ClearableField = Exclude<keyof ConformitySheetData, "layout">;
+
+// which sheet fields to clear when a given canvas text element is deleted —
+// the element's text is always derived from these, so clearing them makes it
+// disappear from the sheet (or, for "title", drop back to its fixed label)
+const CLEARABLE_FIELDS: Partial<Record<ConformityElementKey, ClearableField[]>> = {
+  production: ["production"],
+  subtitle: ["subtitle"],
+  title: ["cameraLetter"],
+  specs1: ["codec", "resolution"],
+  specs2: ["fps"],
+  cameraInfo: ["cameraModel", "cameraSerial"],
+  lens: ["lens"],
+  notes: ["notes"],
+  chefOp: ["chefOp"],
+  date: ["date"],
+};
+
 function defaultImageLayout(index: number): ImageLayout {
   const xs = [0.22, 0.42, 0.62, 0.82];
   return { pos: { x: xs[index % xs.length], y: 0.8 }, size: { w: 0.18, h: 0.14 } };
@@ -105,6 +220,7 @@ function DraggableText({
   selected,
   onSelect,
   onDrag,
+  onDragStart,
 }: {
   el: SheetElement;
   pos: { x: number; y: number };
@@ -112,6 +228,7 @@ function DraggableText({
   selected: boolean;
   onSelect: (key: ConformityElementKey) => void;
   onDrag: (key: ConformityElementKey, pos: { x: number; y: number }) => void;
+  onDragStart: () => void;
 }) {
   const draggedRef = useRef(false);
 
@@ -133,6 +250,7 @@ function DraggableText({
       if (!draggedRef.current) {
         if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return;
         draggedRef.current = true;
+        onDragStart();
       }
       const rect = sheetEl.getBoundingClientRect();
       onDrag(el.key, {
@@ -193,6 +311,7 @@ function DraggableImage({
   onSelect,
   onDrag,
   onResize,
+  onDragStart,
 }: {
   src: string;
   layout: ImageLayout;
@@ -200,6 +319,7 @@ function DraggableImage({
   onSelect: () => void;
   onDrag: (pos: { x: number; y: number }) => void;
   onResize: (next: ImageLayout) => void;
+  onDragStart: () => void;
 }) {
   const draggedRef = useRef(false);
 
@@ -214,6 +334,7 @@ function DraggableImage({
       if (!draggedRef.current) {
         if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 4) return;
         draggedRef.current = true;
+        onDragStart();
       }
       const rect = sheetEl.getBoundingClientRect();
       onDrag({
@@ -242,6 +363,7 @@ function DraggableImage({
     e.stopPropagation();
     const sheetEl = (e.currentTarget.closest("[data-sheet]") as HTMLElement | null);
     if (!sheetEl) return;
+    onDragStart();
     // keep the top-left corner fixed and let the bottom-right corner follow the cursor,
     // recomputing both size and (since pos is a center anchor) center position together
     const topLeft = { x: layout.pos.x - layout.size.w / 2, y: layout.pos.y - layout.size.h / 2 };
@@ -293,20 +415,22 @@ function DraggableImage({
 
 const SWATCHES = ["#000000", "#ffffff", "#dc2626", "#2563eb", "#16a34a", "#ca8a04"];
 
+const panelPositionClass =
+  "fixed inset-x-4 top-4 z-30 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg lg:inset-x-auto lg:top-auto lg:bottom-24 lg:right-4 lg:w-60";
+
 function StylePanel({
   style,
   onChange,
   onClose,
+  onSliderDragStart,
 }: {
   style: TextStyle;
   onChange: (patch: Partial<TextStyle>) => void;
   onClose: () => void;
+  onSliderDragStart: () => void;
 }) {
   return (
-    <div
-      data-style-panel
-      className="fixed inset-x-4 top-4 z-30 rounded-lg border-[2.5px] border-black bg-white p-3 shadow-comic-lg lg:inset-x-auto lg:top-auto lg:bottom-4 lg:right-4 lg:w-60"
-    >
+    <div data-floating-ui className={panelPositionClass}>
       <div className="mb-2 flex items-center justify-between">
         <span className="font-display text-xs font-bold uppercase tracking-wide">Style du texte</span>
         <button onClick={onClose} className="text-sm font-bold leading-none" title="Fermer">
@@ -318,7 +442,10 @@ function StylePanel({
       <select
         className="mb-3 w-full rounded border-[1.5px] border-black px-1.5 py-1 text-xs"
         value={style.fontFamily}
-        onChange={(e) => onChange({ fontFamily: e.target.value })}
+        onChange={(e) => {
+          onSliderDragStart();
+          onChange({ fontFamily: e.target.value });
+        }}
       >
         {FONT_OPTIONS.map((f) => (
           <option key={f.value} value={f.value}>
@@ -335,13 +462,17 @@ function StylePanel({
         min={8}
         max={64}
         value={style.fontSize}
+        onPointerDown={onSliderDragStart}
         onChange={(e) => onChange({ fontSize: Number(e.target.value) })}
         className="mb-3 w-full"
       />
 
       <div className="mb-3 flex gap-2">
         <button
-          onClick={() => onChange({ bold: !style.bold })}
+          onClick={() => {
+            onSliderDragStart();
+            onChange({ bold: !style.bold });
+          }}
           className={`flex-1 rounded border-[1.5px] border-black py-1 text-sm font-bold ${
             style.bold ? "bg-black text-white" : "bg-white text-black"
           }`}
@@ -349,7 +480,10 @@ function StylePanel({
           G
         </button>
         <button
-          onClick={() => onChange({ italic: !style.italic })}
+          onClick={() => {
+            onSliderDragStart();
+            onChange({ italic: !style.italic });
+          }}
           className={`flex-1 rounded border-[1.5px] border-black py-1 text-sm italic ${
             style.italic ? "bg-black text-white" : "bg-white text-black"
           }`}
@@ -363,7 +497,10 @@ function StylePanel({
         {SWATCHES.map((c) => (
           <button
             key={c}
-            onClick={() => onChange({ color: c })}
+            onClick={() => {
+              onSliderDragStart();
+              onChange({ color: c });
+            }}
             className={`h-6 w-6 rounded-full border-[1.5px] border-black ${
               style.color.toLowerCase() === c ? "ring-2 ring-black ring-offset-1" : ""
             }`}
@@ -374,6 +511,7 @@ function StylePanel({
         <input
           type="color"
           value={style.color}
+          onPointerDown={onSliderDragStart}
           onChange={(e) => onChange({ color: e.target.value })}
           className="h-6 w-8 cursor-pointer rounded border-[1.5px] border-black bg-transparent p-0"
           title="Couleur personnalisée"
@@ -383,9 +521,51 @@ function StylePanel({
   );
 }
 
+function ImageStylePanel({
+  layout,
+  onResize,
+  onClose,
+  onSliderDragStart,
+}: {
+  layout: ImageLayout;
+  onResize: (next: ImageLayout) => void;
+  onClose: () => void;
+  onSliderDragStart: () => void;
+}) {
+  const widthPct = Math.round(layout.size.w * 100);
+  return (
+    <div data-floating-ui className={panelPositionClass}>
+      <div className="mb-2 flex items-center justify-between">
+        <span className="font-display text-xs font-bold uppercase tracking-wide">Image</span>
+        <button onClick={onClose} className="text-sm font-bold leading-none" title="Fermer">
+          ×
+        </button>
+      </div>
+
+      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Taille — {widthPct}%</label>
+      <input
+        type="range"
+        min={6}
+        max={90}
+        value={widthPct}
+        onPointerDown={onSliderDragStart}
+        onChange={(e) => {
+          const newW = Number(e.target.value) / 100;
+          const aspect = layout.size.h / layout.size.w;
+          const newH = clamp(newW * aspect, 0.06, 0.9);
+          onResize({ pos: layout.pos, size: { w: newW, h: newH } });
+        }}
+        className="w-full"
+      />
+    </div>
+  );
+}
+
 export default function ConformityPage() {
-  const [sheet, setSheet] = useState<ConformitySheetData>(EMPTY_SHEET);
-  const [images, setImages] = useState<SheetImage[]>([]);
+  const [sheet, setSheetRaw] = useState<ConformitySheetData>(EMPTY_SHEET);
+  const [images, setImagesRaw] = useState<SheetImage[]>([]);
+  const [past, setPast] = useState<Doc[]>([]);
+  const [future, setFuture] = useState<Doc[]>([]);
   const [dragActive, setDragActive] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [loaded, setLoaded] = useState(false);
@@ -394,10 +574,19 @@ export default function ConformityPage() {
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // always mirrors the latest state so history snapshots taken from event
+  // handlers (which run after render) never read a stale closure
+  const sheetRef = useRef(sheet);
+  const imagesRef = useRef(images);
+  sheetRef.current = sheet;
+  imagesRef.current = images;
+
+  const editSnapshotRef = useRef<Doc | null>(null);
+
   useEffect(() => {
     const draft = loadDraft();
     // eslint-disable-next-line react-hooks/set-state-in-effect -- syncing from an external store (localStorage) on mount
-    setSheet(draft ?? { ...EMPTY_SHEET, date: todayIso() });
+    setSheetRaw(draft ?? { ...EMPTY_SHEET, date: todayIso() });
     setLoaded(true);
   }, []);
 
@@ -416,7 +605,7 @@ export default function ConformityPage() {
     if (!selected) return;
     const handler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest("[data-style-panel]") || target.closest("[data-draggable-text]")) return;
+      if (target.closest("[data-floating-ui]") || target.closest("[data-draggable-text]")) return;
       setSelected(null);
     };
     document.addEventListener("pointerdown", handler);
@@ -427,68 +616,188 @@ export default function ConformityPage() {
     if (!selectedImageId) return;
     const handler = (e: PointerEvent) => {
       const target = e.target as HTMLElement;
-      if (target.closest("[data-image]")) return;
+      if (target.closest("[data-floating-ui]") || target.closest("[data-image]")) return;
       setSelectedImageId(null);
     };
     document.addEventListener("pointerdown", handler);
     return () => document.removeEventListener("pointerdown", handler);
   }, [selectedImageId]);
 
+  // history: undo/redo snapshots -----------------------------------------
+
+  const commitSnapshot = useCallback(() => {
+    setPast((p) => [...p, { sheet: sheetRef.current, images: imagesRef.current }].slice(-50));
+    setFuture([]);
+  }, []);
+
+  const undo = useCallback(() => {
+    setPast((p) => {
+      if (p.length === 0) return p;
+      const prev = p[p.length - 1];
+      setFuture((f) => [{ sheet: sheetRef.current, images: imagesRef.current }, ...f].slice(0, 50));
+      setSheetRaw(prev.sheet);
+      setImagesRaw(prev.images);
+      return p.slice(0, -1);
+    });
+  }, []);
+
+  const redo = useCallback(() => {
+    setFuture((f) => {
+      if (f.length === 0) return f;
+      const next = f[0];
+      setPast((p) => [...p, { sheet: sheetRef.current, images: imagesRef.current }].slice(-50));
+      setSheetRaw(next.sheet);
+      setImagesRaw(next.images);
+      return f.slice(1);
+    });
+  }, []);
+
+  const beginFieldEdit = useCallback(() => {
+    editSnapshotRef.current = { sheet: sheetRef.current, images: imagesRef.current };
+  }, []);
+
+  const endFieldEdit = useCallback(() => {
+    const snap = editSnapshotRef.current;
+    editSnapshotRef.current = null;
+    if (!snap) return;
+    // deferred so any pending state update from the field's own change has
+    // definitely flushed (and sheetRef/imagesRef updated) before comparing
+    requestAnimationFrame(() => {
+      if (snap.sheet === sheetRef.current && snap.images === imagesRef.current) return;
+      setPast((p) => [...p, snap].slice(-50));
+      setFuture([]);
+    });
+  }, []);
+
+  // Ctrl+Z / Ctrl+Shift+Z (or Ctrl+Y) — skipped while typing in a field so the
+  // browser's own native undo-within-that-field keeps working as expected
   useEffect(() => {
-    if (!selectedImageId) return;
     const handler = (e: KeyboardEvent) => {
-      if (e.key !== "Backspace" && e.key !== "Delete") return;
-      e.preventDefault();
-      setImages((imgs) => imgs.filter((img) => img.id !== selectedImageId));
-      setSelectedImageId(null);
+      if (!(e.ctrlKey || e.metaKey)) return;
+      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+      const key = e.key.toLowerCase();
+      if (key === "z" && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (key === "y" || (key === "z" && e.shiftKey)) {
+        e.preventDefault();
+        redo();
+      }
     };
     window.addEventListener("keydown", handler);
     return () => window.removeEventListener("keydown", handler);
-  }, [selectedImageId]);
+  }, [undo, redo]);
+
+  // selection + deletion ---------------------------------------------------
+
+  const selectText = useCallback((key: ConformityElementKey) => {
+    setSelectedImageId(null);
+    setSelected(key);
+  }, []);
+
+  const selectImage = useCallback((id: string) => {
+    setSelected(null);
+    setSelectedImageId(id);
+  }, []);
+
+  const clearElement = useCallback(
+    (key: ConformityElementKey) => {
+      const fields = CLEARABLE_FIELDS[key];
+      if (!fields) return;
+      commitSnapshot();
+      setSheetRaw((s) => {
+        const next = { ...s };
+        for (const f of fields) next[f] = "";
+        return next;
+      });
+    },
+    [commitSnapshot]
+  );
+
+  const deleteSelected = useCallback(() => {
+    if (selectedImageId) {
+      commitSnapshot();
+      setImagesRaw((imgs) => imgs.filter((img) => img.id !== selectedImageId));
+      setSelectedImageId(null);
+    } else if (selected) {
+      clearElement(selected);
+      setSelected(null);
+    }
+  }, [selected, selectedImageId, commitSnapshot, clearElement]);
+
+  useEffect(() => {
+    if (!selected && !selectedImageId) return;
+    const handler = (e: KeyboardEvent) => {
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
+      const tag = (document.activeElement as HTMLElement | null)?.tagName;
+      if (tag === "INPUT" || tag === "TEXTAREA") return;
+      e.preventDefault();
+      deleteSelected();
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [selected, selectedImageId, deleteSelected]);
+
+  // sheet / image mutations -------------------------------------------------
 
   const update = useCallback(
     <K extends keyof ConformitySheetData>(key: K, value: ConformitySheetData[K]) => {
-      setSheet((s) => ({ ...s, [key]: value }));
+      setSheetRaw((s) => ({ ...s, [key]: value }));
     },
     []
   );
 
   const updatePos = useCallback((key: ConformityElementKey, pos: { x: number; y: number }) => {
-    setSheet((s) => ({ ...s, layout: { ...s.layout, [key]: { ...s.layout[key], pos } } }));
+    setSheetRaw((s) => ({ ...s, layout: { ...s.layout, [key]: { ...s.layout[key], pos } } }));
   }, []);
 
   const updateStyle = useCallback((key: ConformityElementKey, patch: Partial<TextStyle>) => {
-    setSheet((s) => ({
+    setSheetRaw((s) => ({
       ...s,
       layout: { ...s.layout, [key]: { ...s.layout[key], style: { ...s.layout[key].style, ...patch } } },
     }));
   }, []);
 
   const updateImagePos = useCallback((id: string, pos: { x: number; y: number }) => {
-    setImages((imgs) => imgs.map((img) => (img.id === id ? { ...img, layout: { ...img.layout, pos } } : img)));
+    setImagesRaw((imgs) => imgs.map((img) => (img.id === id ? { ...img, layout: { ...img.layout, pos } } : img)));
   }, []);
 
   const updateImageLayout = useCallback((id: string, next: ImageLayout) => {
-    setImages((imgs) => imgs.map((img) => (img.id === id ? { ...img, layout: next } : img)));
+    setImagesRaw((imgs) => imgs.map((img) => (img.id === id ? { ...img, layout: next } : img)));
   }, []);
 
   const handleFiles = useCallback(
     (fileList: FileList | File[]) => {
-      const files = Array.from(fileList).filter((f) => f.type.startsWith("image/"));
+      // accept files with no reported MIME type too — some mobile browsers
+      // (notably iOS Safari for HEIC photos picked from the library) leave
+      // file.type empty even though the OS picker already restricted the
+      // selection to images via the input's accept="image/*"
+      const files = Array.from(fileList).filter((f) => f.type === "" || f.type.startsWith("image/"));
       const room = MAX_IMAGES - images.length;
       if (room <= 0 || files.length === 0) return;
+      commitSnapshot();
       files.slice(0, room).forEach((file) => {
         const id = `img_${Math.random().toString(36).slice(2, 10)}`;
-        const reader = new FileReader();
-        reader.onload = () => {
-          setImages((cur) =>
-            cur.length >= MAX_IMAGES ? cur : [...cur, { id, src: String(reader.result), layout: defaultImageLayout(cur.length) }]
-          );
-        };
-        reader.readAsDataURL(file);
+        fileToDataUrl(file)
+          .then((dataUrl) => {
+            setImagesRaw((cur) =>
+              cur.length >= MAX_IMAGES ? cur : [...cur, { id, src: dataUrl, layout: defaultImageLayout(cur.length) }]
+            );
+          })
+          .catch(() => setToast("Impossible de charger cette image"));
       });
     },
-    [images.length]
+    [images.length, commitSnapshot]
+  );
+
+  const removeImage = useCallback(
+    (id: string) => {
+      commitSnapshot();
+      setImagesRaw((cur) => cur.filter((i) => i.id !== id));
+      setSelectedImageId((cur) => (cur === id ? null : cur));
+    },
+    [commitSnapshot]
   );
 
   const fileName = `${sheet.production.trim().replace(/\s+/g, "_") || "confo_cadre"}`;
@@ -535,13 +844,14 @@ export default function ConformityPage() {
 
   const handleReset = useCallback(() => {
     if (!window.confirm("Réinitialiser la page ? Toutes les données saisies seront perdues.")) return;
+    commitSnapshot();
     clearDraft();
-    setSheet({ ...EMPTY_SHEET, date: todayIso() });
-    setImages([]);
+    setSheetRaw({ ...EMPTY_SHEET, date: todayIso() });
+    setImagesRaw([]);
     setSelected(null);
     setSelectedImageId(null);
     setToast("Page réinitialisée");
-  }, []);
+  }, [commitSnapshot]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>) => {
@@ -575,6 +885,8 @@ export default function ConformityPage() {
     (el) => el.key === "production" || el.key === "title" || el.value.trim() !== ""
   );
 
+  const selectedImage = selectedImageId ? images.find((img) => img.id === selectedImageId) ?? null : null;
+
   return (
     <div className="flex min-h-screen flex-col bg-white">
       <header className="flex flex-wrap items-center gap-3 border-b-[3px] border-black bg-white px-4 py-2.5">
@@ -594,13 +906,17 @@ export default function ConformityPage() {
         <div className="flex flex-col gap-3 lg:max-h-[calc(100vh-90px)] lg:overflow-y-auto lg:pr-1">
           <p className="rounded-lg border-[2px] border-black/20 bg-black/[0.03] px-2.5 py-2 text-[11px] font-semibold text-black/60">
             Astuce : sur l&apos;aperçu à droite, faites glisser un texte pour le repositionner, ou cliquez dessus
-            pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi, se
-            redimensionne par sa poignée en bas à droite, et se supprime avec Retour arrière une fois cliquée.
+            pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi et se
+            redimensionne (par sa poignée en bas à droite, ou par le curseur de taille une fois sélectionnée).
+            Sélectionnez un élément puis appuyez sur Retour arrière ou l&apos;icône poubelle pour le supprimer.
+            Les flèches en bas à droite (ou Ctrl+Z / Ctrl+Maj+Z) annulent et rétablissent.
           </p>
           <Field label="Nom de la production">
             <input
               className={inputClass}
               value={sheet.production}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("production", e.target.value)}
               placeholder="Ex. Pax Massilia"
             />
@@ -609,6 +925,8 @@ export default function ConformityPage() {
             <input
               className={inputClass}
               value={sheet.subtitle}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("subtitle", e.target.value)}
               placeholder="Ex. S3 Bloc 2"
             />
@@ -619,6 +937,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.cameraLetter}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("cameraLetter", e.target.value)}
                 placeholder="A"
               />
@@ -627,6 +947,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.chefOp}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("chefOp", e.target.value)}
               />
             </Field>
@@ -636,6 +958,8 @@ export default function ConformityPage() {
             <input
               className={inputClass}
               value={sheet.cameraModel}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("cameraModel", e.target.value)}
               placeholder="Ex. ARRI Alexa 35"
             />
@@ -644,6 +968,8 @@ export default function ConformityPage() {
             <input
               className={inputClass}
               value={sheet.cameraSerial}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("cameraSerial", e.target.value)}
               placeholder="Ex. #65706"
             />
@@ -654,6 +980,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.codec}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("codec", e.target.value)}
                 placeholder="ARRIRAW"
               />
@@ -662,6 +990,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.resolution}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("resolution", e.target.value)}
                 placeholder="4.6K"
               />
@@ -673,7 +1003,10 @@ export default function ConformityPage() {
               <select
                 className={inputClass}
                 value={sheet.ratioPreset}
-                onChange={(e) => update("ratioPreset", e.target.value)}
+                onChange={(e) => {
+                  commitSnapshot();
+                  update("ratioPreset", e.target.value);
+                }}
               >
                 {RATIO_PRESETS.map((r) => (
                   <option key={r} value={r}>
@@ -686,6 +1019,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.fps}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("fps", e.target.value)}
                 placeholder="25 fps"
               />
@@ -696,6 +1031,8 @@ export default function ConformityPage() {
               <input
                 className={inputClass}
                 value={sheet.ratioCustom}
+                onFocus={beginFieldEdit}
+                onBlur={endFieldEdit}
                 onChange={(e) => update("ratioCustom", e.target.value)}
                 placeholder="Ex. 1.66:1"
               />
@@ -706,6 +1043,8 @@ export default function ConformityPage() {
             <input
               className={inputClass}
               value={sheet.lens}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("lens", e.target.value)}
               placeholder="Ex. Leitz Summicron-C 50mm"
             />
@@ -715,6 +1054,8 @@ export default function ConformityPage() {
               type="date"
               className={inputClass}
               value={sheet.date}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("date", e.target.value)}
             />
           </Field>
@@ -722,6 +1063,8 @@ export default function ConformityPage() {
             <textarea
               className={`${inputClass} min-h-20 resize-y`}
               value={sheet.notes}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
               onChange={(e) => update("notes", e.target.value)}
               placeholder="Tout réglage à préciser pour la post-prod…"
             />
@@ -754,8 +1097,7 @@ export default function ConformityPage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setImages((cur) => cur.filter((i) => i.id !== img.id));
-                          if (selectedImageId === img.id) setSelectedImageId(null);
+                          removeImage(img.id);
                         }}
                         className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] border-black bg-white text-[10px] font-bold leading-none"
                         title="Retirer"
@@ -803,8 +1145,9 @@ export default function ConformityPage() {
                   pos={sheet.layout[el.key].pos}
                   style={sheet.layout[el.key].style}
                   selected={selected === el.key}
-                  onSelect={setSelected}
+                  onSelect={selectText}
                   onDrag={updatePos}
+                  onDragStart={commitSnapshot}
                 />
               ))}
               {images.map((img) => (
@@ -813,9 +1156,10 @@ export default function ConformityPage() {
                   src={img.src}
                   layout={img.layout}
                   selected={selectedImageId === img.id}
-                  onSelect={() => setSelectedImageId(img.id)}
+                  onSelect={() => selectImage(img.id)}
                   onDrag={(pos) => updateImagePos(img.id, pos)}
                   onResize={(next) => updateImageLayout(img.id, next)}
+                  onDragStart={commitSnapshot}
                 />
               ))}
             </div>
@@ -828,8 +1172,35 @@ export default function ConformityPage() {
           style={sheet.layout[selected].style}
           onChange={(patch) => updateStyle(selected, patch)}
           onClose={() => setSelected(null)}
+          onSliderDragStart={commitSnapshot}
         />
       )}
+
+      {selectedImage && (
+        <ImageStylePanel
+          layout={selectedImage.layout}
+          onResize={(next) => updateImageLayout(selectedImage.id, next)}
+          onClose={() => setSelectedImageId(null)}
+          onSliderDragStart={commitSnapshot}
+        />
+      )}
+
+      <div data-floating-ui className="fixed bottom-4 right-4 z-40 flex gap-2">
+        <RoundIconButton onClick={undo} disabled={past.length === 0} title="Annuler (Ctrl+Z)">
+          <UndoIcon />
+        </RoundIconButton>
+        <RoundIconButton onClick={redo} disabled={future.length === 0} title="Rétablir (Ctrl+Maj+Z)">
+          <UndoIcon flipped />
+        </RoundIconButton>
+        <RoundIconButton
+          onClick={deleteSelected}
+          disabled={!selected && !selectedImageId}
+          title="Supprimer l'élément sélectionné (Retour arrière)"
+          variant="solid"
+        >
+          <TrashIcon />
+        </RoundIconButton>
+      </div>
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg border-[2.5px] border-black bg-black px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-comic">
