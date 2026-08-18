@@ -144,28 +144,62 @@ function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
 }
 
-// normalizes any picked file (including formats an <img> tag can't reliably
-// decode from a data URL across browsers, e.g. HEIC straight from an iPhone's
-// photo library) to a plain PNG data URL by round-tripping through a canvas
-async function fileToDataUrl(file: File): Promise<string> {
+function readAsDataUrl(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result));
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
+}
+
+// true only if the browser's own <img> can actually decode this data URL —
+// some formats (notably HEIC straight from an iPhone's photo library)
+// produce a valid-looking data URL that <img> silently refuses to render
+function dataUrlRendersAsImage(dataUrl: string): Promise<boolean> {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => resolve(img.naturalWidth > 0 && img.naturalHeight > 0);
+    img.onerror = () => resolve(false);
+    img.src = dataUrl;
+  });
+}
+
+const MAX_IMAGE_DIMENSION = 2000;
+
+// last-resort recovery for a file <img> can't render directly: decode it via
+// createImageBitmap (broader native codec support, e.g. HEIC in Safari) and
+// re-encode as a JPEG every browser can display. Downscaled to stay well
+// under canvas size/memory limits on phones for very high-resolution photos.
+async function normalizeViaCanvas(file: File): Promise<string | null> {
   try {
-    const bitmap = await createImageBitmap(file);
+    const bitmap = await Promise.race([
+      createImageBitmap(file),
+      new Promise<never>((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000)),
+    ]);
+    const scale = Math.min(1, MAX_IMAGE_DIMENSION / Math.max(bitmap.width, bitmap.height));
     const canvas = document.createElement("canvas");
-    canvas.width = bitmap.width;
-    canvas.height = bitmap.height;
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
     const ctx = canvas.getContext("2d");
-    if (!ctx) throw new Error("no 2d context");
-    ctx.drawImage(bitmap, 0, 0);
+    if (!ctx) return null;
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
     bitmap.close?.();
-    return canvas.toDataURL("image/png");
+    return canvas.toDataURL("image/jpeg", 0.92);
   } catch {
-    return await new Promise<string>((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => resolve(String(reader.result));
-      reader.onerror = () => reject(reader.error);
-      reader.readAsDataURL(file);
-    });
+    return null;
   }
+}
+
+// normalizes any picked file to a data URL the browser can actually render.
+// most photos (JPEG/PNG/WebP) work as-is — that fast path is tried first and
+// verified — and only a format <img> can't handle falls through to the
+// heavier canvas-based recovery
+async function fileToDataUrl(file: File): Promise<string> {
+  const raw = await readAsDataUrl(file);
+  if (await dataUrlRendersAsImage(raw)) return raw;
+  const normalized = await normalizeViaCanvas(file);
+  return normalized ?? raw;
 }
 
 const SHEET_RATIO_PCT = (210 / 297) * 100; // A4 landscape height-as-%-of-width, locked via a padding-bottom spacer
@@ -190,18 +224,36 @@ interface Doc {
   images: SheetImage[];
 }
 
-type ClearableField = Exclude<keyof ConformitySheetData, "layout">;
+type ClearableField = Exclude<keyof ConformitySheetData, "layout" | "hiddenElements">;
 
 // which sheet fields to clear when a given canvas text element is deleted —
-// the element's text is always derived from these, so clearing them makes it
-// disappear from the sheet (or, for "title", drop back to its fixed label)
+// "title" has no field of its own (it's a fixed label), it's only ever
+// removed from view via hiddenElements
 const CLEARABLE_FIELDS: Partial<Record<ConformityElementKey, ClearableField[]>> = {
   production: ["production"],
   subtitle: ["subtitle"],
-  title: ["cameraLetter"],
   specs1: ["codec", "resolution"],
   specs2: ["fps"],
   cameraInfo: ["cameraModel", "cameraSerial"],
+  lens: ["lens"],
+  notes: ["notes"],
+  chefOp: ["chefOp"],
+  date: ["date"],
+};
+
+// the reverse mapping — editing one of these fields in the sidebar means the
+// user wants that element back, so un-hide it even if it was deleted before
+const FIELD_TO_ELEMENTS: Partial<Record<ClearableField, ConformityElementKey[]>> = {
+  production: ["production"],
+  subtitle: ["subtitle"],
+  cameraLetter: ["title"],
+  codec: ["specs1"],
+  resolution: ["specs1"],
+  ratioPreset: ["specs2"],
+  ratioCustom: ["specs2"],
+  fps: ["specs2"],
+  cameraModel: ["cameraInfo"],
+  cameraSerial: ["cameraInfo"],
   lens: ["lens"],
   notes: ["notes"],
   chefOp: ["chefOp"],
@@ -703,12 +755,11 @@ export default function ConformityPage() {
 
   const clearElement = useCallback(
     (key: ConformityElementKey) => {
-      const fields = CLEARABLE_FIELDS[key];
-      if (!fields) return;
       commitSnapshot();
       setSheetRaw((s) => {
-        const next = { ...s };
-        for (const f of fields) next[f] = "";
+        const fields = CLEARABLE_FIELDS[key];
+        const next = { ...s, hiddenElements: Array.from(new Set([...s.hiddenElements, key])) };
+        if (fields) for (const f of fields) next[f] = "";
         return next;
       });
     },
@@ -743,7 +794,11 @@ export default function ConformityPage() {
 
   const update = useCallback(
     <K extends keyof ConformitySheetData>(key: K, value: ConformitySheetData[K]) => {
-      setSheetRaw((s) => ({ ...s, [key]: value }));
+      setSheetRaw((s) => {
+        const unhide = FIELD_TO_ELEMENTS[key as ClearableField];
+        const hiddenElements = unhide ? s.hiddenElements.filter((k) => !unhide.includes(k)) : s.hiddenElements;
+        return { ...s, [key]: value, hiddenElements };
+      });
     },
     []
   );
@@ -881,9 +936,10 @@ export default function ConformityPage() {
     { key: "chefOp", value: sheet.chefOp ? `Chef opérateur : ${sheet.chefOp}` : "", align: "left", uppercase: true },
     { key: "date", value: sheet.date ? `Date : ${formatDateFr(sheet.date)}` : "", align: "right", uppercase: true },
   ];
-  const elements = rawElements.filter(
-    (el) => el.key === "production" || el.key === "title" || el.value.trim() !== ""
-  );
+  const elements = rawElements.filter((el) => {
+    if (sheet.hiddenElements.includes(el.key)) return false;
+    return el.key === "production" || el.key === "title" || el.value.trim() !== "";
+  });
 
   const selectedImage = selectedImageId ? images.find((img) => img.id === selectedImageId) ?? null : null;
 

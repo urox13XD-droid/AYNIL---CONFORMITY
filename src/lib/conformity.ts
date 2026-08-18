@@ -49,6 +49,10 @@ export interface ConformitySheetData {
   date: string;
   notes: string;
   layout: ConformityLayoutMap;
+  // elements explicitly removed from the sheet via the trash button / Backspace —
+  // kept distinct from the underlying fields being empty, since "production" and
+  // "title" always render *something* (a placeholder / a fixed label) otherwise
+  hiddenElements: ConformityElementKey[];
 }
 
 export const FONT_OPTIONS = [
@@ -122,6 +126,7 @@ export const EMPTY_SHEET: ConformitySheetData = {
   date: "",
   notes: "",
   layout: DEFAULT_LAYOUT,
+  hiddenElements: [],
 };
 
 export function ratioLabel(sheet: ConformitySheetData): string {
