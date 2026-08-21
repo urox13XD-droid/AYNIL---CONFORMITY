@@ -981,8 +981,8 @@ export default function ConformityPage() {
   const selectedImage = selectedImageId ? images.find((img) => img.id === selectedImageId) ?? null : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-white">
-      <header className="flex flex-wrap items-center gap-3 border-b-[3px] border-black bg-white px-4 py-2.5">
+    <div className="flex min-h-screen flex-col bg-white lg:h-screen lg:overflow-hidden">
+      <header className="flex shrink-0 flex-wrap items-center gap-3 border-b-[3px] border-black bg-white px-4 py-2.5">
         <Logo subtitle="CONFORMITY" />
         <div className="flex-1" />
         <div className="flex flex-wrap items-center gap-2">
@@ -995,8 +995,8 @@ export default function ConformityPage() {
         </div>
       </header>
 
-      <div className="grid flex-1 grid-cols-1 gap-6 p-4 lg:grid-cols-[380px_1fr]">
-        <div className="flex flex-col gap-3 lg:max-h-[calc(100vh-90px)] lg:overflow-y-auto lg:pr-1">
+      <div className="grid flex-1 grid-cols-1 gap-6 p-4 lg:grid-cols-[380px_1fr] lg:min-h-0">
+        <div className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           <p className="rounded-lg border-[2px] border-black/20 bg-black/[0.03] px-2.5 py-2 text-[11px] font-semibold text-black/60">
             Astuce : sur l&apos;aperçu à droite, faites glisser un texte pour le repositionner, ou cliquez dessus
             pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi et se
@@ -1231,7 +1231,7 @@ export default function ConformityPage() {
           </Field>
         </div>
 
-        <div className="flex items-start justify-center">
+        <div className="flex items-start justify-center lg:min-h-0 lg:overflow-y-auto">
           <div className="relative w-full max-w-3xl">
             {/* padding-bottom spacer locks the box to the A4-landscape ratio regardless of
                 content height (an added image or long notes can never push it into portrait) */}
