@@ -138,6 +138,55 @@ function FullscreenIcon({ active }: { active?: boolean }) {
   );
 }
 
+function LanguageMenu({
+  lang,
+  open,
+  onToggle,
+  onSelect,
+  t,
+}: {
+  lang: Lang;
+  open: boolean;
+  onToggle: () => void;
+  onSelect: (lang: Lang) => void;
+  t: Strings;
+}) {
+  return (
+    <div data-lang-menu className="relative">
+      <button
+        type="button"
+        onClick={onToggle}
+        className="flex shrink-0 items-center gap-1 rounded-lg border-[2.5px] border-black bg-white px-3 py-1.5 text-xs font-bold uppercase tracking-wide text-black shadow-comic-sm transition hover:bg-black hover:text-white"
+      >
+        {lang === "fr" ? t.langMenuFr : t.langMenuEn}
+        <span aria-hidden="true">▾</span>
+      </button>
+      {open && (
+        <div className="absolute right-0 top-full z-30 mt-1.5 w-32 overflow-hidden rounded-lg border-[2.5px] border-black bg-white shadow-comic-sm">
+          <button
+            type="button"
+            onClick={() => onSelect("fr")}
+            className={`block w-full px-3 py-1.5 text-left text-xs font-bold uppercase tracking-wide ${
+              lang === "fr" ? "bg-black text-white" : "bg-white text-black hover:bg-black/10"
+            }`}
+          >
+            {t.langMenuFr}
+          </button>
+          <button
+            type="button"
+            onClick={() => onSelect("en")}
+            className={`block w-full px-3 py-1.5 text-left text-xs font-bold uppercase tracking-wide ${
+              lang === "en" ? "bg-black text-white" : "bg-white text-black hover:bg-black/10"
+            }`}
+          >
+            {t.langMenuEn}
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
+
 function Field({
   label,
   children,
@@ -169,6 +218,230 @@ function todayIso(): string {
 
 function clamp(v: number, min: number, max: number) {
   return Math.min(max, Math.max(min, v));
+}
+
+type Lang = "fr" | "en";
+
+interface Strings {
+  headerNew: string;
+  headerExportPng: string;
+  headerExportPdf: string;
+  headerPrint: string;
+  hint: string;
+  fieldProduction: string;
+  fieldProductionPlaceholder: string;
+  fieldSubtitle: string;
+  fieldSubtitlePlaceholder: string;
+  fieldCamera: string;
+  fieldCameraPlaceholder: string;
+  fieldChefOp: string;
+  fieldCameraModel: string;
+  fieldCameraModelPlaceholder: string;
+  fieldCameraSerial: string;
+  fieldCameraSerialPlaceholder: string;
+  fieldCodec: string;
+  fieldCodecPlaceholder: string;
+  fieldResolution: string;
+  fieldResolutionPlaceholder: string;
+  fieldRatio: string;
+  fieldFps: string;
+  fieldFpsPlaceholder: string;
+  fieldRatioCustom: string;
+  fieldRatioCustomPlaceholder: string;
+  fieldLens: string;
+  fieldLensPlaceholder: string;
+  fieldDistortion: string;
+  fieldDistortionPlaceholder: string;
+  fieldDate: string;
+  fieldNotes: string;
+  fieldNotesPlaceholder: string;
+  fieldImages: (max: number) => string;
+  dropzoneText: string;
+  dropzoneMax: (max: number) => string;
+  removeImageTitle: string;
+  resizeTitle: string;
+  altPreview: string;
+  altFrameRef: string;
+  ratioCustomLabel: string;
+  sheetProductionPlaceholder: string;
+  sheetTitle: string;
+  sheetCamera: string;
+  sheetDistortionPrefix: string;
+  sheetChefOpPrefix: string;
+  sheetDatePrefix: string;
+  styleTitle: string;
+  styleFont: string;
+  styleSize: (n: number) => string;
+  styleColor: string;
+  styleCustomColor: string;
+  imageStyleTitle: string;
+  imageStyleSize: (n: number) => string;
+  undoTitle: string;
+  redoTitle: string;
+  deleteTitle: string;
+  fullscreenEnter: string;
+  fullscreenExit: string;
+  toastFullscreenUnavailable: string;
+  toastPngExported: string;
+  toastPdfExported: string;
+  toastPageReset: string;
+  toastImageLoadFail: string;
+  confirmReset: string;
+  fontDisplaySuffix: string;
+  close: string;
+  langMenuFr: string;
+  langMenuEn: string;
+}
+
+const STRINGS: Record<Lang, Strings> = {
+  fr: {
+    headerNew: "Nouveau",
+    headerExportPng: "Export PNG",
+    headerExportPdf: "Export PDF",
+    headerPrint: "Imprimer",
+    hint: "Astuce : sur l'aperçu à droite, faites glisser un texte pour le repositionner, ou cliquez dessus pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi et se redimensionne (par sa poignée en bas à droite, ou par le curseur de taille une fois sélectionnée). Sélectionnez un élément puis appuyez sur Retour arrière ou l'icône poubelle pour le supprimer. Les flèches en bas à droite (ou Ctrl+Z / Ctrl+Maj+Z) annulent et rétablissent.",
+    fieldProduction: "Nom de la production",
+    fieldProductionPlaceholder: "Ex. Pax Massilia",
+    fieldSubtitle: "Référence / épisode / bloc",
+    fieldSubtitlePlaceholder: "Ex. S3 Bloc 2",
+    fieldCamera: "Caméra",
+    fieldCameraPlaceholder: "A",
+    fieldChefOp: "Chef opérateur",
+    fieldCameraModel: "Modèle caméra",
+    fieldCameraModelPlaceholder: "Ex. ARRI Alexa 35",
+    fieldCameraSerial: "N° de série",
+    fieldCameraSerialPlaceholder: "Ex. #65706",
+    fieldCodec: "Codec",
+    fieldCodecPlaceholder: "ARRIRAW",
+    fieldResolution: "Résolution",
+    fieldResolutionPlaceholder: "4.6K",
+    fieldRatio: "Ratio image",
+    fieldFps: "Cadence",
+    fieldFpsPlaceholder: "25 fps",
+    fieldRatioCustom: "Ratio personnalisé",
+    fieldRatioCustomPlaceholder: "Ex. 1.66:1",
+    fieldLens: "Objectif",
+    fieldLensPlaceholder: "Ex. Leitz Summicron-C 50mm",
+    fieldDistortion: "Info distorsion",
+    fieldDistortionPlaceholder: "Ex. Anamorphique 1.8x, correction en post…",
+    fieldDate: "Date",
+    fieldNotes: "Réglages / notes complémentaires",
+    fieldNotesPlaceholder: "Tout réglage à préciser pour la post-prod…",
+    fieldImages: (max: number) => `Images de référence (optionnel, max ${max})`,
+    dropzoneText: "Glissez-déposez une ou plusieurs images ici, ou cliquez pour parcourir",
+    dropzoneMax: (max: number) => `Maximum ${max} images atteint`,
+    removeImageTitle: "Retirer",
+    resizeTitle: "Redimensionner",
+    altPreview: "Aperçu",
+    altFrameRef: "Référence de cadre",
+    ratioCustomLabel: "Personnalisé",
+    sheetProductionPlaceholder: "Nom de la production",
+    sheetTitle: "Conformité Cadre",
+    sheetCamera: "Caméra",
+    sheetDistortionPrefix: "Distorsion : ",
+    sheetChefOpPrefix: "Chef opérateur : ",
+    sheetDatePrefix: "Date : ",
+    styleTitle: "Style du texte",
+    styleFont: "Police",
+    styleSize: (n: number) => `Taille — ${n}px`,
+    styleColor: "Couleur",
+    styleCustomColor: "Couleur personnalisée",
+    imageStyleTitle: "Image",
+    imageStyleSize: (n: number) => `Taille — ${n}%`,
+    undoTitle: "Annuler (Ctrl+Z)",
+    redoTitle: "Rétablir (Ctrl+Maj+Z)",
+    deleteTitle: "Supprimer l'élément sélectionné (Retour arrière)",
+    fullscreenEnter: "Plein écran",
+    fullscreenExit: "Quitter le plein écran (Échap)",
+    toastFullscreenUnavailable: "Plein écran indisponible sur cet appareil",
+    toastPngExported: "PNG exporté",
+    toastPdfExported: "PDF exporté",
+    toastPageReset: "Page réinitialisée",
+    toastImageLoadFail: "Impossible de charger cette image",
+    confirmReset: "Réinitialiser la page ? Toutes les données saisies seront perdues.",
+    fontDisplaySuffix: "(affichage)",
+    close: "Fermer",
+    langMenuFr: "Français",
+    langMenuEn: "English",
+  },
+  en: {
+    headerNew: "New",
+    headerExportPng: "Export PNG",
+    headerExportPdf: "Export PDF",
+    headerPrint: "Print",
+    hint: "Tip: on the preview to the right, drag a text to reposition it, or click it to change its font, size, style and color. Images can also be moved and resized (via the handle at the bottom right, or the size slider once selected). Select an element then press Backspace or the trash icon to delete it. The arrows at the bottom right (or Ctrl+Z / Ctrl+Shift+Z) undo and redo.",
+    fieldProduction: "Production name",
+    fieldProductionPlaceholder: "E.g. Pax Massilia",
+    fieldSubtitle: "Reference / episode / block",
+    fieldSubtitlePlaceholder: "E.g. S3 Block 2",
+    fieldCamera: "Camera",
+    fieldCameraPlaceholder: "A",
+    fieldChefOp: "Director of photography",
+    fieldCameraModel: "Camera model",
+    fieldCameraModelPlaceholder: "E.g. ARRI Alexa 35",
+    fieldCameraSerial: "Serial No.",
+    fieldCameraSerialPlaceholder: "E.g. #65706",
+    fieldCodec: "Codec",
+    fieldCodecPlaceholder: "ARRIRAW",
+    fieldResolution: "Resolution",
+    fieldResolutionPlaceholder: "4.6K",
+    fieldRatio: "Aspect ratio",
+    fieldFps: "Frame rate",
+    fieldFpsPlaceholder: "25 fps",
+    fieldRatioCustom: "Custom ratio",
+    fieldRatioCustomPlaceholder: "E.g. 1.66:1",
+    fieldLens: "Lens",
+    fieldLensPlaceholder: "E.g. Leitz Summicron-C 50mm",
+    fieldDistortion: "Distortion info",
+    fieldDistortionPlaceholder: "E.g. Anamorphic 1.8x, corrected in post…",
+    fieldDate: "Date",
+    fieldNotes: "Additional settings / notes",
+    fieldNotesPlaceholder: "Any settings to note for post-production…",
+    fieldImages: (max: number) => `Reference images (optional, max ${max})`,
+    dropzoneText: "Drag and drop one or more images here, or click to browse",
+    dropzoneMax: (max: number) => `Maximum of ${max} images reached`,
+    removeImageTitle: "Remove",
+    resizeTitle: "Resize",
+    altPreview: "Preview",
+    altFrameRef: "Frame reference",
+    ratioCustomLabel: "Custom",
+    sheetProductionPlaceholder: "Production name",
+    sheetTitle: "Frame Conformity",
+    sheetCamera: "Camera",
+    sheetDistortionPrefix: "Distortion: ",
+    sheetChefOpPrefix: "Director of photography: ",
+    sheetDatePrefix: "Date: ",
+    styleTitle: "Text style",
+    styleFont: "Font",
+    styleSize: (n: number) => `Size — ${n}px`,
+    styleColor: "Color",
+    styleCustomColor: "Custom color",
+    imageStyleTitle: "Image",
+    imageStyleSize: (n: number) => `Size — ${n}%`,
+    undoTitle: "Undo (Ctrl+Z)",
+    redoTitle: "Redo (Ctrl+Shift+Z)",
+    deleteTitle: "Delete selected element (Backspace)",
+    fullscreenEnter: "Fullscreen",
+    fullscreenExit: "Exit fullscreen (Esc)",
+    toastFullscreenUnavailable: "Fullscreen unavailable on this device",
+    toastPngExported: "PNG exported",
+    toastPdfExported: "PDF exported",
+    toastPageReset: "Page reset",
+    toastImageLoadFail: "Unable to load this image",
+    confirmReset: "Reset the page? All entered data will be lost.",
+    fontDisplaySuffix: "(display)",
+    close: "Close",
+    langMenuFr: "Français",
+    langMenuEn: "English",
+  },
+};
+
+function ratioPresetLabel(preset: string, t: Strings): string {
+  return preset === "Personnalisé" ? t.ratioCustomLabel : preset;
+}
+
+function fontOptionLabel(label: string, t: Strings): string {
+  return label.replace("(affichage)", t.fontDisplaySuffix);
 }
 
 // true only if the browser's own <img> can actually decode this source —
@@ -387,6 +660,7 @@ function DraggableImage({
   onDrag,
   onResize,
   onDragStart,
+  t,
 }: {
   src: string;
   layout: ImageLayout;
@@ -395,6 +669,7 @@ function DraggableImage({
   onDrag: (pos: { x: number; y: number }) => void;
   onResize: (next: ImageLayout) => void;
   onDragStart: () => void;
+  t: Strings;
 }) {
   const draggedRef = useRef(false);
 
@@ -478,10 +753,10 @@ function DraggableImage({
       }}
     >
       {/* eslint-disable-next-line @next/next/no-img-element -- dropped image, rendered into an export canvas */}
-      <img src={src} alt="Référence de cadre" className="h-full w-full pointer-events-none object-contain" draggable={false} />
+      <img src={src} alt={t.altFrameRef} className="h-full w-full pointer-events-none object-contain" draggable={false} />
       <div
         onPointerDown={onPointerDownResize}
-        title="Redimensionner"
+        title={t.resizeTitle}
         className="absolute -bottom-2 -right-2 h-5 w-5 cursor-nwse-resize rounded-sm border-[2px] border-black bg-white shadow-comic-sm"
       />
     </div>
@@ -498,22 +773,24 @@ function StylePanel({
   onChange,
   onClose,
   onSliderDragStart,
+  t,
 }: {
   style: TextStyle;
   onChange: (patch: Partial<TextStyle>) => void;
   onClose: () => void;
   onSliderDragStart: () => void;
+  t: Strings;
 }) {
   return (
     <div data-floating-ui className={panelPositionClass}>
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-display text-xs font-bold uppercase tracking-wide">Style du texte</span>
-        <button onClick={onClose} className="text-sm font-bold leading-none" title="Fermer">
+        <span className="font-display text-xs font-bold uppercase tracking-wide">{t.styleTitle}</span>
+        <button onClick={onClose} className="text-sm font-bold leading-none" title={t.close}>
           ×
         </button>
       </div>
 
-      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Police</label>
+      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">{t.styleFont}</label>
       <select
         className="mb-3 w-full rounded border-[1.5px] border-black px-1.5 py-1 text-xs"
         value={style.fontFamily}
@@ -524,13 +801,13 @@ function StylePanel({
       >
         {FONT_OPTIONS.map((f) => (
           <option key={f.value} value={f.value}>
-            {f.label}
+            {fontOptionLabel(f.label, t)}
           </option>
         ))}
       </select>
 
       <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">
-        Taille — {style.fontSize}px
+        {t.styleSize(style.fontSize)}
       </label>
       <input
         type="range"
@@ -567,7 +844,7 @@ function StylePanel({
         </button>
       </div>
 
-      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Couleur</label>
+      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">{t.styleColor}</label>
       <div className="flex flex-wrap items-center gap-1.5">
         {SWATCHES.map((c) => (
           <button
@@ -589,7 +866,7 @@ function StylePanel({
           onPointerDown={onSliderDragStart}
           onChange={(e) => onChange({ color: e.target.value })}
           className="h-6 w-8 cursor-pointer rounded border-[1.5px] border-black bg-transparent p-0"
-          title="Couleur personnalisée"
+          title={t.styleCustomColor}
         />
       </div>
     </div>
@@ -601,23 +878,25 @@ function ImageStylePanel({
   onResize,
   onClose,
   onSliderDragStart,
+  t,
 }: {
   layout: ImageLayout;
   onResize: (next: ImageLayout) => void;
   onClose: () => void;
   onSliderDragStart: () => void;
+  t: Strings;
 }) {
   const widthPct = Math.round(layout.size.w * 100);
   return (
     <div data-floating-ui className={panelPositionClass}>
       <div className="mb-2 flex items-center justify-between">
-        <span className="font-display text-xs font-bold uppercase tracking-wide">Image</span>
-        <button onClick={onClose} className="text-sm font-bold leading-none" title="Fermer">
+        <span className="font-display text-xs font-bold uppercase tracking-wide">{t.imageStyleTitle}</span>
+        <button onClick={onClose} className="text-sm font-bold leading-none" title={t.close}>
           ×
         </button>
       </div>
 
-      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">Taille — {widthPct}%</label>
+      <label className="mb-1 block text-[10px] font-bold uppercase text-black/60">{t.imageStyleSize(widthPct)}</label>
       <input
         type="range"
         min={6}
@@ -646,6 +925,9 @@ export default function ConformityPage() {
   const [selected, setSelected] = useState<ConformityElementKey | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [lang, setLang] = useState<Lang>("fr");
+  const [langMenuOpen, setLangMenuOpen] = useState(false);
+  const t = STRINGS[lang];
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const sidebarRef = useRef<HTMLDivElement>(null);
@@ -669,9 +951,20 @@ export default function ConformityPage() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 1800);
-    return () => clearTimeout(t);
+    const timer = setTimeout(() => setToast(null), 1800);
+    return () => clearTimeout(timer);
   }, [toast]);
+
+  useEffect(() => {
+    if (!langMenuOpen) return;
+    const handler = (e: PointerEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-lang-menu]")) return;
+      setLangMenuOpen(false);
+    };
+    document.addEventListener("pointerdown", handler);
+    return () => document.removeEventListener("pointerdown", handler);
+  }, [langMenuOpen]);
 
   // Escape exiting fullscreen is handled natively by the browser — this just
   // keeps the button's icon in sync when that (or any other) exit happens
@@ -703,7 +996,7 @@ export default function ConformityPage() {
   const toggleFullscreen = useCallback(() => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen?.().catch(() => {
-        setToast("Plein écran indisponible sur cet appareil");
+        setToast(t.toastFullscreenUnavailable);
       });
     } else {
       document.exitFullscreen?.();
@@ -897,7 +1190,7 @@ export default function ConformityPage() {
               cur.length >= MAX_IMAGES ? cur : [...cur, { id, src, layout: defaultImageLayout(cur.length) }]
             );
           })
-          .catch(() => setToast("Impossible de charger cette image"));
+          .catch(() => setToast(t.toastImageLoadFail));
       });
     },
     [images.length, commitSnapshot]
@@ -929,7 +1222,7 @@ export default function ConformityPage() {
     a.href = dataUrl;
     a.download = `${fileName}.png`;
     a.click();
-    setToast("PNG exporté");
+    setToast(t.toastPngExported);
   }, [fileName, clearSelectionAndWait]);
 
   const handleExportPdf = useCallback(async () => {
@@ -946,7 +1239,7 @@ export default function ConformityPage() {
     const pageHeight = pdf.internal.pageSize.getHeight();
     pdf.addImage(dataUrl, "PNG", 0, 0, pageWidth, pageHeight, undefined, "FAST");
     pdf.save(`${fileName}.pdf`);
-    setToast("PDF exporté");
+    setToast(t.toastPdfExported);
   }, [fileName, clearSelectionAndWait]);
 
   const handlePrint = useCallback(async () => {
@@ -955,13 +1248,13 @@ export default function ConformityPage() {
   }, [clearSelectionAndWait]);
 
   const handleReset = useCallback(() => {
-    if (!window.confirm("Réinitialiser la page ? Toutes les données saisies seront perdues.")) return;
+    if (!window.confirm(t.confirmReset)) return;
     commitSnapshot();
     setSheetRaw({ ...EMPTY_SHEET, date: todayIso() });
     setImagesRaw([]);
     setSelected(null);
     setSelectedImageId(null);
-    setToast("Page réinitialisée");
+    setToast(t.toastPageReset);
   }, [commitSnapshot]);
 
   const onDrop = useCallback(
@@ -976,11 +1269,11 @@ export default function ConformityPage() {
   const ratio = ratioLabel(sheet);
 
   const rawElements: SheetElement[] = [
-    { key: "production", value: sheet.production || "Nom de la production", align: "left", uppercase: true },
+    { key: "production", value: sheet.production || t.sheetProductionPlaceholder, align: "left", uppercase: true },
     { key: "subtitle", value: sheet.subtitle, align: "right", uppercase: true },
     {
       key: "title",
-      value: `Conformité Cadre${sheet.cameraLetter ? ` — Caméra ${sheet.cameraLetter}` : ""}`,
+      value: `${t.sheetTitle}${sheet.cameraLetter ? ` — ${t.sheetCamera} ${sheet.cameraLetter}` : ""}`,
       align: "center",
       uppercase: true,
     },
@@ -988,10 +1281,10 @@ export default function ConformityPage() {
     { key: "specs2", value: [ratio, sheet.fps].filter(Boolean).join(" · "), align: "center", uppercase: true },
     { key: "cameraInfo", value: [sheet.cameraModel, sheet.cameraSerial].filter(Boolean).join(" "), align: "center" },
     { key: "lens", value: sheet.lens, align: "center" },
-    { key: "distortion", value: sheet.distortion ? `Distorsion : ${sheet.distortion}` : "", align: "center" },
+    { key: "distortion", value: sheet.distortion ? `${t.sheetDistortionPrefix}${sheet.distortion}` : "", align: "center" },
     { key: "notes", value: sheet.notes, align: "center" },
-    { key: "chefOp", value: sheet.chefOp ? `Chef opérateur : ${sheet.chefOp}` : "", align: "left", uppercase: true },
-    { key: "date", value: sheet.date ? `Date : ${formatDateFr(sheet.date)}` : "", align: "right", uppercase: true },
+    { key: "chefOp", value: sheet.chefOp ? `${t.sheetChefOpPrefix}${sheet.chefOp}` : "", align: "left", uppercase: true },
+    { key: "date", value: sheet.date ? `${t.sheetDatePrefix}${formatDateFr(sheet.date)}` : "", align: "right", uppercase: true },
   ];
   const elements = rawElements.filter((el) => {
     if (sheet.hiddenElements.includes(el.key)) return false;
@@ -1006,57 +1299,54 @@ export default function ConformityPage() {
         <Logo subtitle="CONFORMITY" />
         <div className="flex-1" />
         <div className="flex flex-wrap items-center gap-2">
-          <ComicButton onClick={handleReset}>Nouveau</ComicButton>
-          <ComicButton onClick={handleExportPng}>Export PNG</ComicButton>
+          <LanguageMenu lang={lang} open={langMenuOpen} onToggle={() => setLangMenuOpen((o) => !o)} onSelect={(l) => { setLang(l); setLangMenuOpen(false); }} t={t} />
+          <ComicButton onClick={handleReset}>{t.headerNew}</ComicButton>
+          <ComicButton onClick={handleExportPng}>{t.headerExportPng}</ComicButton>
           <ComicButton onClick={handleExportPdf} variant="solid">
-            Export PDF
+            {t.headerExportPdf}
           </ComicButton>
-          <ComicButton onClick={handlePrint}>Imprimer</ComicButton>
+          <ComicButton onClick={handlePrint}>{t.headerPrint}</ComicButton>
         </div>
       </header>
 
       <div className="grid flex-1 grid-cols-1 gap-6 p-4 lg:grid-cols-[380px_1fr] lg:min-h-0">
         <div ref={sidebarRef} className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           <p className="rounded-lg border-[2px] border-black/20 bg-black/[0.03] px-2.5 py-2 text-[11px] font-semibold text-black/60">
-            Astuce : sur l&apos;aperçu à droite, faites glisser un texte pour le repositionner, ou cliquez dessus
-            pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi et se
-            redimensionne (par sa poignée en bas à droite, ou par le curseur de taille une fois sélectionnée).
-            Sélectionnez un élément puis appuyez sur Retour arrière ou l&apos;icône poubelle pour le supprimer.
-            Les flèches en bas à droite (ou Ctrl+Z / Ctrl+Maj+Z) annulent et rétablissent.
+            {t.hint}
           </p>
-          <Field label="Nom de la production">
+          <Field label={t.fieldProduction}>
             <input
               className={inputClass}
               value={sheet.production}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("production", e.target.value)}
-              placeholder="Ex. Pax Massilia"
+              placeholder={t.fieldProductionPlaceholder}
             />
           </Field>
-          <Field label="Référence / épisode / bloc">
+          <Field label={t.fieldSubtitle}>
             <input
               className={inputClass}
               value={sheet.subtitle}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("subtitle", e.target.value)}
-              placeholder="Ex. S3 Bloc 2"
+              placeholder={t.fieldSubtitlePlaceholder}
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Caméra">
+            <Field label={t.fieldCamera}>
               <input
                 className={inputClass}
                 value={sheet.cameraLetter}
                 onFocus={beginFieldEdit}
                 onBlur={endFieldEdit}
                 onChange={(e) => update("cameraLetter", e.target.value)}
-                placeholder="A"
+                placeholder={t.fieldCameraPlaceholder}
               />
             </Field>
-            <Field label="Chef opérateur">
+            <Field label={t.fieldChefOp}>
               <input
                 className={inputClass}
                 value={sheet.chefOp}
@@ -1067,52 +1357,52 @@ export default function ConformityPage() {
             </Field>
           </div>
 
-          <Field label="Modèle caméra">
+          <Field label={t.fieldCameraModel}>
             <input
               className={inputClass}
               value={sheet.cameraModel}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("cameraModel", e.target.value)}
-              placeholder="Ex. ARRI Alexa 35"
+              placeholder={t.fieldCameraModelPlaceholder}
             />
           </Field>
-          <Field label="N° de série">
+          <Field label={t.fieldCameraSerial}>
             <input
               className={inputClass}
               value={sheet.cameraSerial}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("cameraSerial", e.target.value)}
-              placeholder="Ex. #65706"
+              placeholder={t.fieldCameraSerialPlaceholder}
             />
           </Field>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Codec">
+            <Field label={t.fieldCodec}>
               <input
                 className={inputClass}
                 value={sheet.codec}
                 onFocus={beginFieldEdit}
                 onBlur={endFieldEdit}
                 onChange={(e) => update("codec", e.target.value)}
-                placeholder="ARRIRAW"
+                placeholder={t.fieldCodecPlaceholder}
               />
             </Field>
-            <Field label="Résolution">
+            <Field label={t.fieldResolution}>
               <input
                 className={inputClass}
                 value={sheet.resolution}
                 onFocus={beginFieldEdit}
                 onBlur={endFieldEdit}
                 onChange={(e) => update("resolution", e.target.value)}
-                placeholder="4.6K"
+                placeholder={t.fieldResolutionPlaceholder}
               />
             </Field>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
-            <Field label="Ratio image">
+            <Field label={t.fieldRatio}>
               <select
                 className={inputClass}
                 value={sheet.ratioPreset}
@@ -1123,56 +1413,56 @@ export default function ConformityPage() {
               >
                 {RATIO_PRESETS.map((r) => (
                   <option key={r} value={r}>
-                    {r}
+                    {ratioPresetLabel(r, t)}
                   </option>
                 ))}
               </select>
             </Field>
-            <Field label="Cadence">
+            <Field label={t.fieldFps}>
               <input
                 className={inputClass}
                 value={sheet.fps}
                 onFocus={beginFieldEdit}
                 onBlur={endFieldEdit}
                 onChange={(e) => update("fps", e.target.value)}
-                placeholder="25 fps"
+                placeholder={t.fieldFpsPlaceholder}
               />
             </Field>
           </div>
           {sheet.ratioPreset === "Personnalisé" && (
-            <Field label="Ratio personnalisé">
+            <Field label={t.fieldRatioCustom}>
               <input
                 className={inputClass}
                 value={sheet.ratioCustom}
                 onFocus={beginFieldEdit}
                 onBlur={endFieldEdit}
                 onChange={(e) => update("ratioCustom", e.target.value)}
-                placeholder="Ex. 1.66:1"
+                placeholder={t.fieldRatioCustomPlaceholder}
               />
             </Field>
           )}
 
-          <Field label="Objectif">
+          <Field label={t.fieldLens}>
             <input
               className={inputClass}
               value={sheet.lens}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("lens", e.target.value)}
-              placeholder="Ex. Leitz Summicron-C 50mm"
+              placeholder={t.fieldLensPlaceholder}
             />
           </Field>
-          <Field label="Info distorsion">
+          <Field label={t.fieldDistortion}>
             <input
               className={inputClass}
               value={sheet.distortion}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("distortion", e.target.value)}
-              placeholder="Ex. Anamorphique 1.8x, correction en post…"
+              placeholder={t.fieldDistortionPlaceholder}
             />
           </Field>
-          <Field label="Date">
+          <Field label={t.fieldDate}>
             <input
               type="date"
               className={inputClass}
@@ -1182,18 +1472,18 @@ export default function ConformityPage() {
               onChange={(e) => update("date", e.target.value)}
             />
           </Field>
-          <Field label="Réglages / notes complémentaires">
+          <Field label={t.fieldNotes}>
             <textarea
               className={`${inputClass} min-h-20 resize-y`}
               value={sheet.notes}
               onFocus={beginFieldEdit}
               onBlur={endFieldEdit}
               onChange={(e) => update("notes", e.target.value)}
-              placeholder="Tout réglage à préciser pour la post-prod…"
+              placeholder={t.fieldNotesPlaceholder}
             />
           </Field>
 
-          <Field label={`Images de référence (optionnel, max ${MAX_IMAGES})`}>
+          <Field label={t.fieldImages(MAX_IMAGES)}>
             <div
               onDragOver={(e) => {
                 e.preventDefault();
@@ -1213,7 +1503,7 @@ export default function ConformityPage() {
                       {/* eslint-disable-next-line @next/next/no-img-element -- pasted/dropped image, not a static asset */}
                       <img
                         src={img.src}
-                        alt="Aperçu"
+                        alt={t.altPreview}
                         className="h-14 w-14 rounded border-[2px] border-black object-cover"
                       />
                       <button
@@ -1223,7 +1513,7 @@ export default function ConformityPage() {
                           removeImage(img.id);
                         }}
                         className="absolute -right-1.5 -top-1.5 flex h-4 w-4 items-center justify-center rounded-full border-[1.5px] border-black bg-white text-[10px] font-bold leading-none"
-                        title="Retirer"
+                        title={t.removeImageTitle}
                       >
                         ×
                       </button>
@@ -1232,9 +1522,7 @@ export default function ConformityPage() {
                 </div>
               )}
               <span className="text-black/60">
-                {images.length >= MAX_IMAGES
-                  ? `Maximum ${MAX_IMAGES} images atteint`
-                  : "Glissez-déposez une ou plusieurs images ici, ou cliquez pour parcourir"}
+                {images.length >= MAX_IMAGES ? t.dropzoneMax(MAX_IMAGES) : t.dropzoneText}
               </span>
               <input
                 ref={fileInputRef}
@@ -1283,6 +1571,7 @@ export default function ConformityPage() {
                   onDrag={(pos) => updateImagePos(img.id, pos)}
                   onResize={(next) => updateImageLayout(img.id, next)}
                   onDragStart={commitSnapshot}
+                  t={t}
                 />
               ))}
             </div>
@@ -1296,6 +1585,7 @@ export default function ConformityPage() {
           onChange={(patch) => updateStyle(selected, patch)}
           onClose={() => setSelected(null)}
           onSliderDragStart={commitSnapshot}
+          t={t}
         />
       )}
 
@@ -1305,27 +1595,28 @@ export default function ConformityPage() {
           onResize={(next) => updateImageLayout(selectedImage.id, next)}
           onClose={() => setSelectedImageId(null)}
           onSliderDragStart={commitSnapshot}
+          t={t}
         />
       )}
 
       <div data-floating-ui className="fixed bottom-4 right-4 z-40 flex gap-2">
-        <RoundIconButton onClick={undo} disabled={past.length === 0} title="Annuler (Ctrl+Z)">
+        <RoundIconButton onClick={undo} disabled={past.length === 0} title={t.undoTitle}>
           <UndoIcon />
         </RoundIconButton>
-        <RoundIconButton onClick={redo} disabled={future.length === 0} title="Rétablir (Ctrl+Maj+Z)">
+        <RoundIconButton onClick={redo} disabled={future.length === 0} title={t.redoTitle}>
           <UndoIcon flipped />
         </RoundIconButton>
         <RoundIconButton
           onClick={deleteSelected}
           disabled={!selected && !selectedImageId}
-          title="Supprimer l'élément sélectionné (Retour arrière)"
+          title={t.deleteTitle}
           variant="solid"
         >
           <TrashIcon />
         </RoundIconButton>
         <RoundIconButton
           onClick={toggleFullscreen}
-          title={isFullscreen ? "Quitter le plein écran (Échap)" : "Plein écran"}
+          title={isFullscreen ? t.fullscreenExit : t.fullscreenEnter}
         >
           <FullscreenIcon active={isFullscreen} />
         </RoundIconButton>
