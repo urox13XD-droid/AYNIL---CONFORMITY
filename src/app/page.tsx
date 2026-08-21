@@ -648,6 +648,7 @@ export default function ConformityPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const sidebarRef = useRef<HTMLDivElement>(null);
 
   // always mirrors the latest state so history snapshots taken from event
   // handlers (which run after render) never read a stale closure
@@ -678,6 +679,25 @@ export default function ConformityPage() {
     const handler = () => setIsFullscreen(!!document.fullscreenElement);
     document.addEventListener("fullscreenchange", handler);
     return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  // on desktop, the rest of the page has no scroll of its own (see the
+  // lg:overflow-hidden root) — redirect any wheel/trackpad scroll to the
+  // sidebar no matter where the pointer is, so the header and preview never
+  // move. Native controls (select dropdowns, the notes textarea, the
+  // floating style panels) keep their own scroll behavior.
+  useEffect(() => {
+    const handler = (e: WheelEvent) => {
+      if (window.innerWidth < 1024) return;
+      const target = e.target as HTMLElement;
+      if (target.closest("[data-floating-ui]") || target.closest("select") || target.closest("textarea")) return;
+      const sidebar = sidebarRef.current;
+      if (!sidebar) return;
+      e.preventDefault();
+      sidebar.scrollTop += e.deltaY;
+    };
+    window.addEventListener("wheel", handler, { passive: false });
+    return () => window.removeEventListener("wheel", handler);
   }, []);
 
   const toggleFullscreen = useCallback(() => {
@@ -996,7 +1016,7 @@ export default function ConformityPage() {
       </header>
 
       <div className="grid flex-1 grid-cols-1 gap-6 p-4 lg:grid-cols-[380px_1fr] lg:min-h-0">
-        <div className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
+        <div ref={sidebarRef} className="flex flex-col gap-3 lg:min-h-0 lg:overflow-y-auto lg:pr-1">
           <p className="rounded-lg border-[2px] border-black/20 bg-black/[0.03] px-2.5 py-2 text-[11px] font-semibold text-black/60">
             Astuce : sur l&apos;aperçu à droite, faites glisser un texte pour le repositionner, ou cliquez dessus
             pour changer sa police, sa taille, son style et sa couleur. Chaque image se déplace aussi et se
