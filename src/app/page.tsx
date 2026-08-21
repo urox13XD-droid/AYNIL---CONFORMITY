@@ -108,6 +108,36 @@ function TrashIcon() {
   );
 }
 
+function FullscreenIcon({ active }: { active?: boolean }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth={2.2}
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className="h-5 w-5"
+    >
+      {active ? (
+        <>
+          <path d="M9 4v5H4" />
+          <path d="M15 4v5h5" />
+          <path d="M9 20v-5H4" />
+          <path d="M15 20v-5h5" />
+        </>
+      ) : (
+        <>
+          <path d="M4 9V4h5" />
+          <path d="M20 9V4h-5" />
+          <path d="M4 15v5h5" />
+          <path d="M20 15v5h-5" />
+        </>
+      )}
+    </svg>
+  );
+}
+
 function Field({
   label,
   children,
@@ -227,6 +257,7 @@ const CLEARABLE_FIELDS: Partial<Record<ConformityElementKey, ClearableField[]>> 
   specs2: ["fps"],
   cameraInfo: ["cameraModel", "cameraSerial"],
   lens: ["lens"],
+  distortion: ["distortion"],
   notes: ["notes"],
   chefOp: ["chefOp"],
   date: ["date"],
@@ -246,6 +277,7 @@ const FIELD_TO_ELEMENTS: Partial<Record<ClearableField, ConformityElementKey[]>>
   cameraModel: ["cameraInfo"],
   cameraSerial: ["cameraInfo"],
   lens: ["lens"],
+  distortion: ["distortion"],
   notes: ["notes"],
   chefOp: ["chefOp"],
   date: ["date"],
@@ -613,6 +645,7 @@ export default function ConformityPage() {
   const [toast, setToast] = useState<string | null>(null);
   const [selected, setSelected] = useState<ConformityElementKey | null>(null);
   const [selectedImageId, setSelectedImageId] = useState<string | null>(null);
+  const [isFullscreen, setIsFullscreen] = useState(false);
   const previewRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -638,6 +671,24 @@ export default function ConformityPage() {
     const t = setTimeout(() => setToast(null), 1800);
     return () => clearTimeout(t);
   }, [toast]);
+
+  // Escape exiting fullscreen is handled natively by the browser — this just
+  // keeps the button's icon in sync when that (or any other) exit happens
+  useEffect(() => {
+    const handler = () => setIsFullscreen(!!document.fullscreenElement);
+    document.addEventListener("fullscreenchange", handler);
+    return () => document.removeEventListener("fullscreenchange", handler);
+  }, []);
+
+  const toggleFullscreen = useCallback(() => {
+    if (!document.fullscreenElement) {
+      document.documentElement.requestFullscreen?.().catch(() => {
+        setToast("Plein écran indisponible sur cet appareil");
+      });
+    } else {
+      document.exitFullscreen?.();
+    }
+  }, []);
 
   useEffect(() => {
     if (!selected) return;
@@ -917,6 +968,7 @@ export default function ConformityPage() {
     { key: "specs2", value: [ratio, sheet.fps].filter(Boolean).join(" · "), align: "center", uppercase: true },
     { key: "cameraInfo", value: [sheet.cameraModel, sheet.cameraSerial].filter(Boolean).join(" "), align: "center" },
     { key: "lens", value: sheet.lens, align: "center" },
+    { key: "distortion", value: sheet.distortion ? `Distorsion : ${sheet.distortion}` : "", align: "center" },
     { key: "notes", value: sheet.notes, align: "center" },
     { key: "chefOp", value: sheet.chefOp ? `Chef opérateur : ${sheet.chefOp}` : "", align: "left", uppercase: true },
     { key: "date", value: sheet.date ? `Date : ${formatDateFr(sheet.date)}` : "", align: "right", uppercase: true },
@@ -1090,6 +1142,16 @@ export default function ConformityPage() {
               placeholder="Ex. Leitz Summicron-C 50mm"
             />
           </Field>
+          <Field label="Info distorsion">
+            <input
+              className={inputClass}
+              value={sheet.distortion}
+              onFocus={beginFieldEdit}
+              onBlur={endFieldEdit}
+              onChange={(e) => update("distortion", e.target.value)}
+              placeholder="Ex. Anamorphique 1.8x, correction en post…"
+            />
+          </Field>
           <Field label="Date">
             <input
               type="date"
@@ -1240,6 +1302,12 @@ export default function ConformityPage() {
           variant="solid"
         >
           <TrashIcon />
+        </RoundIconButton>
+        <RoundIconButton
+          onClick={toggleFullscreen}
+          title={isFullscreen ? "Quitter le plein écran (Échap)" : "Plein écran"}
+        >
+          <FullscreenIcon active={isFullscreen} />
         </RoundIconButton>
       </div>
 

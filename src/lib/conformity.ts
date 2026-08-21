@@ -24,6 +24,7 @@ export const ELEMENT_KEYS = [
   "specs2",
   "cameraInfo",
   "lens",
+  "distortion",
   "notes",
   "chefOp",
   "date",
@@ -45,6 +46,7 @@ export interface ConformitySheetData {
   ratioCustom: string;
   fps: string;
   lens: string;
+  distortion: string;
   chefOp: string;
   date: string;
   notes: string;
@@ -94,6 +96,7 @@ export const DEFAULT_LAYOUT: ConformityLayoutMap = {
   specs2: { pos: { x: 0.5, y: 0.52 }, style: ts(15, true) },
   cameraInfo: { pos: { x: 0.5, y: 0.6 }, style: ts(14, false) },
   lens: { pos: { x: 0.5, y: 0.67 }, style: ts(14, false) },
+  distortion: { pos: { x: 0.5, y: 0.75 }, style: ts(12, false, { color: "#4b5563" }) },
   notes: { pos: { x: 0.5, y: 0.86 }, style: ts(11, false, { color: "#4b5563" }) },
   chefOp: { pos: { x: 0.18, y: 0.93 }, style: ts(13, true) },
   date: { pos: { x: 0.82, y: 0.93 }, style: ts(13, true) },
@@ -122,6 +125,7 @@ export const EMPTY_SHEET: ConformitySheetData = {
   ratioCustom: "",
   fps: "",
   lens: "",
+  distortion: "",
   chefOp: "",
   date: "",
   notes: "",
