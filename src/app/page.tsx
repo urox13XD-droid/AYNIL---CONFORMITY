@@ -1299,13 +1299,13 @@ export default function ConformityPage() {
         <Logo subtitle="CONFORMITY" />
         <div className="flex-1" />
         <div className="flex flex-wrap items-center gap-2">
-          <LanguageMenu lang={lang} open={langMenuOpen} onToggle={() => setLangMenuOpen((o) => !o)} onSelect={(l) => { setLang(l); setLangMenuOpen(false); }} t={t} />
           <ComicButton onClick={handleReset}>{t.headerNew}</ComicButton>
           <ComicButton onClick={handleExportPng}>{t.headerExportPng}</ComicButton>
           <ComicButton onClick={handleExportPdf} variant="solid">
             {t.headerExportPdf}
           </ComicButton>
           <ComicButton onClick={handlePrint}>{t.headerPrint}</ComicButton>
+          <LanguageMenu lang={lang} open={langMenuOpen} onToggle={() => setLangMenuOpen((o) => !o)} onSelect={(l) => { setLang(l); setLangMenuOpen(false); }} t={t} />
         </div>
       </header>
 
@@ -1539,7 +1539,7 @@ export default function ConformityPage() {
           </Field>
         </div>
 
-        <div className="flex items-start justify-center lg:min-h-0 lg:overflow-y-auto">
+        <div className="flex items-start justify-center gap-4 lg:min-h-0">
           <div className="relative w-full max-w-3xl">
             {/* padding-bottom spacer locks the box to the A4-landscape ratio regardless of
                 content height (an added image or long notes can never push it into portrait) */}
@@ -1576,6 +1576,35 @@ export default function ConformityPage() {
               ))}
             </div>
           </div>
+
+          {/* on desktop, a normal flex sibling docked beside the sheet (the sheet shrinks
+              to make room, so this never overlaps its border/corner); on mobile (no room
+              to the right) it reverts to a fixed overlay in the bottom-right of the viewport */}
+          <div
+            data-floating-ui
+            className="fixed bottom-4 right-4 z-40 grid w-24 shrink-0 grid-cols-2 gap-2 lg:static lg:self-end"
+          >
+            <RoundIconButton onClick={undo} disabled={past.length === 0} title={t.undoTitle}>
+              <UndoIcon />
+            </RoundIconButton>
+            <RoundIconButton onClick={redo} disabled={future.length === 0} title={t.redoTitle}>
+              <UndoIcon flipped />
+            </RoundIconButton>
+            <RoundIconButton
+              onClick={deleteSelected}
+              disabled={!selected && !selectedImageId}
+              title={t.deleteTitle}
+              variant="solid"
+            >
+              <TrashIcon />
+            </RoundIconButton>
+            <RoundIconButton
+              onClick={toggleFullscreen}
+              title={isFullscreen ? t.fullscreenExit : t.fullscreenEnter}
+            >
+              <FullscreenIcon active={isFullscreen} />
+            </RoundIconButton>
+          </div>
         </div>
       </div>
 
@@ -1598,29 +1627,6 @@ export default function ConformityPage() {
           t={t}
         />
       )}
-
-      <div data-floating-ui className="fixed bottom-4 right-4 z-40 flex gap-2">
-        <RoundIconButton onClick={undo} disabled={past.length === 0} title={t.undoTitle}>
-          <UndoIcon />
-        </RoundIconButton>
-        <RoundIconButton onClick={redo} disabled={future.length === 0} title={t.redoTitle}>
-          <UndoIcon flipped />
-        </RoundIconButton>
-        <RoundIconButton
-          onClick={deleteSelected}
-          disabled={!selected && !selectedImageId}
-          title={t.deleteTitle}
-          variant="solid"
-        >
-          <TrashIcon />
-        </RoundIconButton>
-        <RoundIconButton
-          onClick={toggleFullscreen}
-          title={isFullscreen ? t.fullscreenExit : t.fullscreenEnter}
-        >
-          <FullscreenIcon active={isFullscreen} />
-        </RoundIconButton>
-      </div>
 
       {toast && (
         <div className="fixed bottom-5 left-1/2 -translate-x-1/2 rounded-lg border-[2.5px] border-black bg-black px-4 py-2 text-xs font-bold uppercase tracking-wide text-white shadow-comic">
